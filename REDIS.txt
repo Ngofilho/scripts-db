@@ -1,0 +1,140 @@
+Anotações REDIS
+
+SET <chave> <valor>
+
+get <chave>
+
+INCR <chave> => incrementa o valor desta chave
+
+DECR <chave> => decrementa o valor da chave
+
+EXISTS <chave> => retorna 0 se não existir
+
+DEL <chave> => apaga a chave valor
+
+FLUSHALL => apaga tudo
+
+SET <chave:propriedade> <valor> ===> desta propriedade  atribui a combinação chave:propriedade o valor 
+Ex. 
+SET server:address http://127.0.0.1
+SET server:port 6379
+
+GET server:port -> irá retornar 6379
+GET server:address -> will return http://127.0.0.1
+
+
+EXPIRE <key> <the amount of time to expire the key/value combination>
+ex.
+
+SET server http://127.0.0.1
+EXPIRE server 50
+
+On this example, the key/value will expire after 50 seconds
+
+To check the remaining time to expire use the function bellow
+
+TTL <key> => Returns the amount of time to expire the key/value
+
+SETEX <key> <amount time> <value>
+
+PERSIST <key> => set the key/value to be persistent on REDIS
+
+MSET <key1> <value1> <keyN> <valueN> => Set N key/values on REDIS
+
+APPEND <key> <value> => Appends the value on the informed key
+
+RENAME <key> <new key name> => Changes the key to the new key name.   
+
+/*****************************************************LIST***********************************************************************/
+
+LPUSH <listName> <first value> => Creates a list named listName and with value "first value"
+
+LPUSH <listName> <other value> => adds other value at the begining of the list
+
+RPUSH <listName> <other value> => adds other value at the end of the list
+
+LRANGE 0 -1 => prints all the values on the list
+
+LPOP <listName> => Retrieve from the begining of the list
+
+RPOP <listName> => Retrieve from the end of the list 
+
+LINSERT <list> BEFORE <existing element in the list> <element to insert> => Inserts the element on the list at especific place
+
+/******************************************************SET**************************************************************************/
+
+SADD <set name> <element> => creates a SET and adds a element in it
+
+SISMEMBER  <set name> <element name> => Returns 1 if the element exists in the SET or if not
+
+SMEMBERS <set name> => Returns all the members of the set
+
+SCARD <set name> => Returns how many members thera at the set
+
+SMOVE <set name origin> <set name destiny> => Removes element from a set to another set
+
+SREM <set name> => removes the element from the Set
+
+ /******************************************************SORTED SET**************************************************************************/
+
+ ZADD <sorted set> <key> <value> => Stores the key/value element in sorted way in the list
+
+ ZRANK <sorted set> <value> => Returns the element position in the set list
+
+ ZRANGE <sorted set> 0 -1 => Returns all the elements inside the sorted set
+
+ ZINCRBY <sorted set> <amount of increment> <element>  => Increments the element in the sorted set
+
+ /***************************************************HASHES**************************************************************************/
+
+ HSET <hash set name> <key> <value> => Creates a Hashset
+
+HGET <hash set name> <element> => Returns the element
+Ex.
+	HSET user:Nilo name "Nilo Gomes"
+	HSET user:Nilo email "nilogomes@gmail.com"
+	HGET user:Nilo nome => Returns Nilo Gomes
+
+HGETALL <hashset name> => Returns all the elements in the hash set
+Ex.
+	HGETALL user:Nilo => Will returns 1)"name" 2) "Nilo Gomes" 3)email and 4)nilogomes@gmail.com
+
+
+HMSET <element> <key1> <value1> <keyN> <valueN> => Inserts multiple elements at the Hash set
+Ex.
+	HMSET user:Nilo name "Nilo Gomes" email "nilogomes@gmail.com" age "90"
+
+HGETALL user:Nilo
+1) "name"
+2) "Nilo Gomes"
+3) "email"
+4) "nilogomes@gmail.com"
+5) "age"
+6) "90"
+
+HKEYS user:Nilo
+	1)"name"
+	2)"email"
+	3)"age"
+
+HVALS user:Nilo 	
+	1)"Nilo Gomes"
+	2)"nilogomes@gmail.com"
+	3)"90"
+
+HINCRBY <hash set name> <element> <amount to increment the element> => Increments the hash set element
+Ex.
+	HINCRBY user:Nilo age 1 => Returns the 91
+
+HDEL <hash set name> <element to be deleted> => Deletes the element
+	HDEL user:Nilo age => returns 1, and delete the age from the hashset
+
+HLEN <hashset name> => returns the amount of element remaing in the hash set	
+	HLEN user:Nilo => Returns 2
+
+/***************************************************REDIS PERSISTENCE **************************************************************************/
+
+SAVE => create a snapshot of the elements on disk at /var/lib/redis/dump.rdb
+
+SAVE < internal> <quantity of elements threshold> => saves the elements on disk when the quantity threshold is reached
+
