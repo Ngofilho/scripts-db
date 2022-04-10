@@ -1,0 +1,90 @@
+$eq -> Procura valores que são iguais ( where a = <valor>)
+$gt -> Procura valores que maiores que o especificado (where a > <valor>)
+$gte -> Procura valores que maiores ou iguais ao valor especificado (where a >= <valor>)
+$in -> Procura por qualquer valor que esteja no array de valores especificados (where a in (<valor1>, <valor2> , ... <valorn>)
+$lt -> Procura por valores que são menores do que o especificado (where a < <valor>)
+$lte -> Procura por valores que são menores ou iguais ao valor especificado (where a <= <valor>)
+
+
+var corr = "85e321ba-0510-4be1-a329-b6a759b158a2";
+db['hotel-prd'].find({correlationId:corr});
+db['comum-prd'].find({correlationId:corr});
+db["hotel-prd"].find({$and:[{"request.body.Hotel.name":"Seamar Hotel", date:{$gte:ISODate("2017-09-07T00:00:00.000")}}]});
+
+
+query = {
+    timestamp: { // 18 minutes ago (from now)
+        $gt: new Date(ISODate().getTime() - 1000 * 60 * 18)
+    }
+}
+
+https://stackoverflow.com/questions/30996728/adding-subtracting-days-to-isodate-in-mongodb-shell
+query = {
+    timestamp: { // 18 minutes ago (from now)
+        $gt: new Date(ISODate().getTime() - 1000 * 60 * 18)
+    }
+}
+
+
+"StartDate" : { "$gte" : new Date(ISODate().getTime() - 1000 * 3600 * 24 * 3) }
+
+"StartDate" : { "$gte" : new Date(ISODate().getTime() - 1000 * 86400 * 3) }
+
+
+print (new Date(ISODate().getTime() - 1000 * 3600 * 24 * 18))
+print(Date())
+
+db.restaurants.find({'address.street':/Flat/});
+db.restaurants.getIndexes()
+
+var db = connect("<x>"); //Conect to database x
+
+print (ObjectId("59b83ccee5724859109642f6").toString());
+
+var albums = db.albums.find({_id:59b83ccee5724859109642f6});//4
+var album_detail = albums.next();
+
+var images = db.images.find({_id:{ $in:album_detail['images'] }});
+
+while ( images.hasNext() )
+{
+ var image_detail = images.next();
+ print ('Image ID is: ' + image_detail['_id'] + ' <Text to be printed at the output>' +  image_detail['property']);
+}
+
+db['portal-ftv-prd'].find({$and:[
+  									{Exception:/bject reference not set to an instance of an object/},
+  									{Date:{$gte:ISODate('2017-10-18T00:00:00.000')}},
+  									{Contoller:'Aereo'}
+  								]
+  						}).sort({$natural:-1});
+
+db.getCollection('aereo-prd').find(
+{
+   url:/fares/,
+ //$or:[{url:/fares/},{url:/availabilities/}]
+ 'response.statusCode': {$ne:200},
+ 'response.body.message':/ERRO: EC 288/i
+},{'response.body.message':1,_id:-1,correlationId:1,date:1,machine:1})
+.sort({$natural:-1})
+.limit(1);
+
+db['portal-ftv-prd'].find(
+							{$and:[{Date:{$gte:ISODate('2017-10-17T00:00:00.001')}}
+							  ,{Date:{$lte:ISODate('2017-10-17T19:59:59.999')}}
+							  ,{Contoller:'Aereo'}]}
+  ).sort({$natural:-1});
+
+
+
+
+db['salesimport-prd'].explain();
+db['salesimport-prd'].find({date:{$gt:new Date(ISODate().getTime() - 1000 * 60 * 60)}}).limit(10).sort({$natural:-1})
+db.getMongo().setSlaveOk()
+db['salesimport-prd'].getHostName()
+db['salesimport-prd'].hostInfo()
+db.getMemInfo()
+db['salesimport-prd'].getIndexes()
+db.salesimport-prd.getIndexes()
+db['salesimport-prd'].stats()
+db['portal-wcf'].find({date: {$gte:ISODate('2017-10-06T22:59:00')}}).sort({$natural:-1});
