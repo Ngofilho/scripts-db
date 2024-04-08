@@ -34,6 +34,8 @@ Exception rules
 |varchar(n)|n = 1...8000 - Variable Length varchar(max)|Non-Unicode|This is an efficient data type for highly variable data only using the actual data length per row. Names and addresses usually fall into this category. varchar(max) can hold up to 2 GB per column. However, this data type can use more disk space leading to extra I/O. Use it sparingly|  
 |nchar(n)| n = 1...4000 - Fixed Length| Unicode|The storage size used is two times n bytes. Use for uniform length or short length character data that requires Unicode. Most systems that store text in multiple languages need Unicode for example.|  
 |nvarchar(n)| n = 1...4000 - Variable Length| Unicode|Use it as you would varchar(n) but for circumstances that require Unicode. Nvarchar(max) is similar to varchar(max) and can hold up to 1 GB of characters, since with Unicode data, 2 bytes are used for each character.|  
+|text| | | |
+|ntext| | | |
 
 ### Integer Data
 
@@ -64,6 +66,25 @@ Exception rules
 |smalldatetime|Jan 1, 1900 to Jun 6, 2079 4bytes|Does not store fractional seconds|
 |datetime2(n)|0001-01-01 to 9999-12-31 6 to 8bytes|Is like the date type combined with the time type. And as with the time type, you can specify the precision of fractional seconds with a default of 7 digits or 100 nanoseconds. And depending on the precision, 6, 7, or 8 bytes are required to store this type.|
 |datetimeoffset(n)|0001-01-01 to 9999-12-31 10bytes|Combines datetime2 with a time zone. The ranges of dates and times are the same as for the datetime2 type, and this type always takes 10 bytes to store.|
+
+
+
+### Binary strings Types
+- binary  
+- varbinary  
+- image  
+
+### Other data types
+- cursor  
+- geography (spatial type)   
+- geometry (spatial type)  
+- hierarchyid  
+- json  
+- rowversion  
+- sql_variant  
+- table  
+- uniqueidentifier  
+- xml  
 
 </details>
 
