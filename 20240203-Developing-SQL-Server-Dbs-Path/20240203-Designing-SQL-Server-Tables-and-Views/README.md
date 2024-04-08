@@ -56,7 +56,7 @@ Exception rules
 
 ### Date Data
 
-|Type|Length||
+|Type|Length|Comments|
 |-|-|-|
 |date|0001-01-01 to 9999-12-31 3bytes||
 |time[(n)]|n = 0 to 7 5bytes|Store times of the day. n = number of fractional seconds to be stored. The default is 7, which stores times as precise as 100 nano seconds. Regardless of the fractional seconds, this type takes 5 bytes to store.|
