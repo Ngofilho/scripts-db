@@ -223,6 +223,47 @@ ALTER TABLE Orders.OrderTracking
 
 </details>
 
+<details><summary>
+
+## Improving Table Design Through Normalization  
+</summary>
+
+##### Normalization is the process of organizing a database to reduce redundancy and improve data integrity.   
+https://database.guide/what-is-normalization/  
+
+##### Objetives  for Data Normalization  
+- Eliminate Anomalies.  
+- Reduce the need for restructuring tables as new requirements or data are added.  
+- Make the relational model provide more information to users.  
+- Make the tables in the database less sensitive to statistics from queries, especially when those statistics are liable to change.   
+
+
+##### 1NF  
+Has 3 simple rules.  
+- There must be only one value per table cell where is the intersection of a row and a column. 
+- There must be one table per set of related data.  
+- Each row must be unique. Usually attained by introducing a primary key, which enforces uniqueness. A primary key must be unique and not null.    
+
+An `IDENTITY` column is guaranteed to be unique for the table, which will help satisfy rule three. To fully satisfy rule three, tables have a PRIMARY KEY defined.
+A `PRIMARY KEY` is a type of constraint and simply means no duplicates. A PRIMARY KEY is a constraint. In general, `constraints` are used by SQL Server to preserve data and referential integrity by prohibiting operations that will violate the constraints.  
+The indexes created for PRIMARY KEY constraints are sometimes called backing indexes. They are not strictly required for rule three, but make it faster for SQL Server to check for duplicates since the alternative would be to read the entire table every time you had to insert a new row just to be sure there are no duplicates.
+The `clustered` property, says that the table data is ordered by the clustering key. Since table data can only be ordered one way, there can only be one clustered index. There is another type of index called `nonclustered` that does not impose any order to the table data.
+
+##### 2NF   
+Builds upon the first.  
+- The database must be in first normal form or 1NF
+- The second rule states that only single column primary keys are allowed. Well, actually the requirement is stated like this, no non-key attributes should be dependent on any proper subset of the key. Although it's possible to satisfy this rule with a composite key, if there are no composite keys, then the only proper subset is the empty set. That implies a single column primary key, which is the standard approach to this problem. And this will mean a change to the Stock table we just built since its composite key is comprised of two columns, the SKU and the Size. But if I change that, I will also have to change the OrderItems table, which refers to the Stock table by those same two column. Let's see that in the next demo.
+
+##### 3NF  
+- The database must be in second normal form or 2NF. The second rule states that column values should only depend upon the key. This also implies that for any table in 3NF, an update to one column should not cause an update to another column unless that other column is a key. A memorable way to describe 3NF is captured in this quote from Bill Kent, who wrote a guide to normal forms back in 1983. He said, "Every non-key must provide a fact about the key, the whole key, and nothing but the key. " Any column in the table that is not part of the table key is a non-key. These are usually called attributes in relational language. So there should be no column that is not dependent on the key.
+
+##### Other Normal Forms  
+BCNF - Boyce Codd normal form (3.5)  
+4NF  
+5NF  
+6NF  
+
+</details>
 
 
 <details><summary>
