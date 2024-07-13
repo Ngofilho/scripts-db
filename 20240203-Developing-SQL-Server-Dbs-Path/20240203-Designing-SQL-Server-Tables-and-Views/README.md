@@ -21,12 +21,15 @@ Exception rules
 - An identifier cannot be longer than 128 characters.  
 
 
-<details><summmary>Data Types</summary>
+<details><summmary> 
+
+### Data Types
+</summary>
 
 ### Textual Data  
 
 |Type|Length|Data|Uses|  
-|-|-|-|  
+|-|-|-|-|  
 |char(n)|n = 1...8000 - Fixed Length|Non-unicode||  
 |varchar(n)|n = 1...8000 - Variable Length varchar(max)|Non-Unicode||  
 |nchar(n)| n = 1...4000 - Fixed Length| Unicode||  
