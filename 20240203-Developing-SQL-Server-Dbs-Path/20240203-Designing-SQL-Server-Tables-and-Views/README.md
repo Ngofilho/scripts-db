@@ -25,13 +25,13 @@ Exception rules
 
 <summmary>Data Types</summary>
 
-### Textual Data
-|Type|Length|Data|Uses|
-|-|-|-|
-|char(n)|n = 1...8000 - Fixed Length|Non-unicode||
-|varchar(n)|n = 1...8000 - Variable Length varchar(max)|Non-Unicode||
-|nchar(n)| n = 1...4000 - Fixed Length| Unicode||
-|nvarchar(n)| n = 1...4000 - Variable Length| Unicode||
+### Textual Data  
+|Type|Length|Data|Uses|  
+|-|-|-|  
+|char(n)|n = 1...8000 - Fixed Length|Non-unicode||  
+|varchar(n)|n = 1...8000 - Variable Length varchar(max)|Non-Unicode||  
+|nchar(n)| n = 1...4000 - Fixed Length| Unicode||  
+|nvarchar(n)| n = 1...4000 - Variable Length| Unicode||  
 
 </details>
 
