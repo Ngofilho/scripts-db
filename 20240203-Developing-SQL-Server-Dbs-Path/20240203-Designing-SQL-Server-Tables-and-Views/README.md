@@ -268,8 +268,6 @@ BCNF - Boyce Codd normal form (3.5)
 
 <details><summary>
 
-<details><summary>
-
 ### Constraints
 </summary>
 
@@ -418,6 +416,8 @@ In this module, we look at the six types of constraints available out of the box
 Designing View to Meet Business Requirements
 Introducing Views
 </details>
+
+<details><summary>
 
 ###### Credit(s)/Other(s)/Reference(s)/Source(s)</summary>  
 
