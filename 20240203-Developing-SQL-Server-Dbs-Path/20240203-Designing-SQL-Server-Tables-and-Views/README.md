@@ -469,32 +469,102 @@ By default, SQL Server will check the table against the newly added constraint. 
 ## Views
 </summary>
 
-=====Organizar daqui pra baixo
+Three types of views basic, partition, and indexed.  
+A developer can write, test, and optimize a query for general use. That query can then be encapsulated in a view, which can be used instead of the bare query.
+`David Parnas` came up with the idea of `information hiding` back in 1972. Then it was in the context of object oriented program design. The principle is that `of segregating the design decisions that may change or are likely to change`. 
+It applies here since the tables underlying a view may change their schema or column names, but an application program, which may be just another piece of T-SQL code, can use the view as an interface to the base tables. Let's hide the base tables in this view. To do that, I'll simply alias the columns from the original tables. This ALTER statement does that. Now when I select from the view, the schemas of the base tables are hidden. I've achieved the desired segregation that information hiding offers.
 
-Designing View to Meet Business Requirements
-Introducing Views
-Hello again. Welcome back to the course, Designing and Implementing Tables and Views in SQL Server. My name is Gerald Britton. In the previous three modules, I showed you the basics of designing tables, normalizing them up to the third normal form, and applying constraints to enforce data and referential integrity. At this point, we have a good set of tables to operate Bob's Shoes order system. One of the effects of normalizing tables is that it takes one or more joints to reconstruct the original, un-normalized View. Customer data goes to the Customers table, CityState data to the City table, inventory to the Stock table, and the orders themselves to the Orders and OrderItems tables. Correctly writing joins every time to get the right data the right way is a bit of an art. Give two developers the same task of joining these tables together to produce a report or view it in a browser, and you'll likely get two different solutions. That is at least a maintenance problem, at worst one of the joints may work most of the time but fail with some edge cases. Wouldn't it be nice if you could somehow take a best-of-breed query to join up these tables and encapsulate it so that everyone could use it, and you only have one thing to maintain. Well, that's exactly what views are for. In this module, you'll learn the basics of creating views to encapsulate queries and begin to discover other great uses for views.
+```sql
+-- alter the view to add column aliases
+CREATE OR ALTER VIEW Orders.CustomerList 
+AS
+  SELECT 
+    cust.CustName             AS Name, 
+    sal.Salutation            AS Salutation,
+    cust.CustStreet           AS Street, 
+    city.CityStateCity        AS City, 
+    city.CityStateProv        AS StateProv,
+    city.CityStatePostalCode  AS PostalCode,
+    city.CityStateCountry     AS Country
+  FROM orders.Customers cust
+    INNER JOIN Orders.CityState city
+      ON cust.CityStateID = city.CityStateID
+    INNER JOIN Orders.Salutations sal
+      ON cust.SalutationID = sal.SalutationID;
+GO
 
-Overview and Motivation
-In the upcoming videos, you'll learn the motivations for views and the problems they address, the limitations of views, what they can and cannot do, three types of views--basic, partition, and indexed. You'll learn how to protect views against table modifications. Without such protection, a view may fail or return erroneous results, if an underlying table is changed or dropped. You'll learn how to persist view results using indexes. Sometimes a view is costly to run. In such cases, performance can be enhanced by adding an index, which saves the view results. I'll also talk about updatable views. Views can be treated, for the most part, like tables including DML operations such as INSERT, DELETE, and UPDATE with certain restrictions. Now let's kick this off by looking at the first item on the list--motivation. The fundamental theorem of use is that they are used to encapsulate queries. A senior developer can write, test, and optimize a query for general use. That query can then be encapsulated in a view, which can be used instead of the bare query. This improves code reuse and reduces maintenance. A view can customize results from a table or set of tables to focus, simplify, and customize the perception each user has of the database. For example, in Bob's Shoes order system, there's no point in showing the delivery date for a new order since the delivery hasn't been scheduled yet. By the same token, the warehouse shipping the order may not care when the order was placed and only want to see the requested delivery date. Views can add a layer of security to the database by acting as a proxy to the underlying data while hiding some of it. You can enforce this by granting users access to the view but not the underlying base tables. Views are also a way of providing backward compatibility. Suppose I need to add a column to the Stock table to show the popularity of an item. Applications reading that table may be affected by the new column. Or perhaps I need to change a data type. Such a change would undoubtedly break existing applications, but views offer a way to mitigate these effects until all applications are updated. You can think of views as virtual tables. Like tables, they can be queried, indexed, and even updated, though some restrictions apply to indexing and updating views as you'll see. A user of a view need not know that they are querying a view and not a table since it mostly looks and acts just like a table.
+SELECT 
+  cl.Salutation,
+  cl.Name,
+  cl.Street,
+  cl.City,
+  cl.StateProv,
+  cl.PostalCode,
+  cl.Country
 
-Reviewing the Bobs Shoes Order System Design
-Let's review the schema of the table we've got so far. All customers are in the Customers table. It has foreign key relationships with the Salutations and CityState tables. On the other side is the Orders table with one row per order. It has a foreign key relationship with the Customers table to enforce that relationship. The OrderItems table references the Orders table and the Stock table. The table definitions matching the schema are available in the downloadable items for this module. Now let's see about creating a view.
-
-Demo 1 - Creating a View to Produced a List of Customers
-For the first demo, I'll create a view to return a list of customers with their salutations, names, and addresses. This means that I have to join three tables, the Customers, CityState, and Salutations tables. Such a query might look like this. Before we go further, I want to highlight some best practices in this query. First, alias the tables being queried. I've aliased the Customers table as cust, the CityState table as city, and the Salutations table as sal. Second, use ANSI join syntax. That means always using the keyword JOIN to join tables, never a comma as in some older syntax. Third, always use two-part names for column references consisting of the table alias and the column name. Sticking to these rules will make your life and that of those maintaining your code easier. If I execute this query, the view is created. Then I can query the view as easily as a table, like this. Notice that the columns all have their original names reflecting the tables they came from. However, this is not necessary and may not be desirable. You may recall that in computer science, there is the notion of information hiding. David Parnas came up with the idea of information hiding back in 1972. Then it was in the context of object oriented program design. The principle is that of segregating the design decisions that may change or are likely to change. It applies here since the tables underlying a view may change their schema or column names, but an application program, which may be just another piece of T-SQL code, can use the view as an interface to the base tables. Let's hide the base tables in this view. To do that, I'll simply alias the columns from the original tables. This ALTER statement does that. Now when I select from the view, the schemas of the base tables are hidden. I've achieved the desired segregation that information hiding offers.
+FROM Orders.CustomerList cl;
+```
 
 Demo 2 - Using WITH SCHEMABINDING
-There's a problem with the view I just defined. It's not obvious at first, so let me show you. Here I have a script to illustrate the problem. First, I create a test table with just two columns, an integer and a float. I populate that table with some sample values. Next, I create a view on that test table. I can easily query the view and get the table contents. Now I'll drop the table. SQL Server does not complain. But what if I query the view again? Boom! It throws an exception unsurprising. But that's a problem. Any application program including other T-SQL code will now break if it tries to query the view. How about something more subtle? I'll redefine the table but with a twist. I've switched the meaning and datatypes of the two columns. The view seems to work again, but does it work as expected? It does not. The first column was supposed to be an integer, and the second a float, not the other way around. Again, application code using this view will break. What can I do? Well, let's go back to the top of this script. This time I'll add an option to the view, WITH SCHEMABINDING. When you use the option WITH SCHEMABINDING in a view, three rules apply. First, the tables the view references cannot be changed without modifying or dropping the view first. The tables can neither be altered nor dropped. This protects application code against such attempts. Second, any SELECT statement in the view must use two-part names, that is, the schema name plus the object name, for any tables' functions and other views referenced. And this rule also implies the third rule, all referenced objects must be in the same database. In other words, three- or four-part names are not permitted. As a general rule, use WITH SCHEMABINDING whenever you can. Other developers and your future self will thank you. Now back to the demo. This view definition fails at first. I've literally said bind this view to a schema, but I've specified no schema. To fix it, I'll just add the default schema, DBO, to that table reference. Let's run the same tests as before. Querying the view works. What about dropping the table? I'm prevented from doing that, and that's a good thing. Let's see if I can change the table with this ALTER command. I can't! Schema binding has blocked my attempt. That means that applications using this view are now guaranteed that it will not return inconsistent results due to base table changes. Now I'll just clean up those test objects. Back in our CustomerList view, I'll add WITH SCHEMABINDING to it to lock it down and verify that it still works.
+There's a problem with the view I just defined. It's not obvious at first, so let me show you. Here I have a script to illustrate the problem. First, I create a test table with just two columns, an integer and a float. I populate that table with some sample values. Next, I create a view on that test table. I can easily query the view and get the table contents. Now I'll drop the table. SQL Server does not complain. But what if I query the view again? Boom! It throws an exception unsurprising. But that's a problem. Any application program including other T-SQL code will now break if it tries to query the view. How about something more subtle? I'll redefine the table but with a twist. I've switched the meaning and datatypes of the two columns. The view seems to work again, but does it work as expected? It does not. The first column was supposed to be an integer, and the second a float, not the other way around. Again, application code using this view will break. What can I do? Well, let's go back to the top of this script. This time I'll add an option to the view, WITH SCHEMABINDING. 
 
-Working with Updateable Views
-like tables, views can be updated, subject to certain restrictions. That means that you can insert, delete, and update rows in A table through view. but in order for this to work, SQL Server has to know what table to update. And that leads to the first restriction. Any modifications, including UPDATE, INSERT, and DELETE statements, must reference columns from only one base table. That means that if your view joins two or more tables, you can update only one of those tables through the view. The second restriction is that the columns being modified must directly reference the data in the base table so the columns cannot be derived, which excludes aggregate functions like sum or average, computed columns and columns from set operators like union and intercept. The third rule says that the columns being modified must not be affected by GROUP BY, HAVING, DISTINCT, PIVOT, or UNPIVOT clauses. This rule and the previous one are consequences of the first rule. Think about it. How could SQL know which row of a base table to update? If data is grouped, there could be no matching rows or many of them. Also, your view cannot use TOP or an OFFSET clause together with the WITH CHECK OPTION clause. You'll see the WITH CHECK OPTION clause in the next demo. It forces all data modification statements executed against the view to follow the conditions in the SELECT statement by making sure that the data remains visible through the view after the modification is committed. Now if the view were to contain a TOP or OFFSET clause, that would imply that some rows may be hidden after the data is modified. So TOP and OFFSET are not allowed when also using the WITH CHECK OPTION. You'll see these rules in action in the following demo.
+When you use the option WITH SCHEMABINDING in a view, three rules apply.
+- First, the tables the view references cannot be changed without modifying or dropping the view first. The tables can neither be altered nor dropped. This protects application code against such attempts.
+- Second, any SELECT statement in the view must use two-part names, that is, the schema name plus the object name, for any tables' functions and other views referenced. And this rule also implies the third rule,
+- Third, all referenced objects must be in the same database. In other words, three- or four-part names are not permitted. As a general rule, use WITH SCHEMABINDING whenever you can.
+  
+```sql
+-- Example of a view using SCHEMABINDING  
+-- Create test table
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b float);
+INSERT INTO FOO (a, b) VALUES (42, 3.14159);
+GO
 
-Demo 3 - Updating Tables using Views
-This is the CustomerList view I've been working on in this module. It joins three tables. This view is updatable. Let's see that. This query returns the current result of that view. Now suppose Trillian and Arthur get married and she takes his surname. I can update the Customers table through the view like this. Now I'm doing it in a transaction so that I can discard the changes. Selecting from the Customers table, not the view, shows that, indeed, the base table was updated. I'll roll back those changes because I just remembered that Trillion also wants her salutation changed to Mrs. So I'll just add that to the UPDATE statement. What should happen? If you guessed that this would fail, you are correct as you can see. I tried to update both the Customers table and the Salutation table through the view. That's not allowed by the first rule. I've got another view here. This one returns a summary of current orders showing the CustName and TotalQuantity ordered. Now I just heard that Trillion's order should be expedited, so I try this UPDATE, but it fails because the query contains a derived column in violation of rule two. Let's try another view, one showing just the TotalItems per order ID. Can I update this one? No, I cannot since it violates rule three. Here's another view designed to only return customers whose names begin with the letter A. Notice that this view has the WITH CHECK OPTION specified. Selecting from this view returns just one row. Now let me try to change Arthur's name to Ford Prefect. Can't do that. I violated the WITH CHECK OPTION property, so my UPDATE is not allowed. This is a useful option on updatable views. You would need a good reason not to use it. As an exercise, pause the video here and see if you can create a view that cannot be updated because it violates rule four, that is, it contains a TOP or OFFSET clause and also specifies WITH CHECK OPTION.
+-- Create a view on the test table
+CREATE OR ALTER VIEW bar
+WITH SCHEMABINDING
+AS
+    SELECT 
+        a AS an_integer, 
+        b as a_float 
+    FROM dbo.foo;
+GO
 
-Summary
-In this module, you learned the basics of building views and that they can be thought of as virtual tables. For most use cases, they can be queried like tables, though there are a few limitations. You also saw the difference between views bound to the base table schemas and those that are not. Whenever possible, use the WITH SCHEMABINDING clause to prevent unexpected results in applications caused by base table changes. I talked about updatable views and the rules that must be followed. In the demos, I tried to violate those rules to show how SQL Server stops that from happening. You also learned about the WITH CHECK OPTION, which preserves the view results when updating or disallows the update. Hopefully you tried this in the mini-exercise at the end of the last demo. Now that I've covered the basics of views, let's look at one of the advanced types called an indexed view.
+```
+
+Like tables, views can be updated, subject to certain restrictions. That means that you can insert, delete, and update rows in A table through view. but in order for this to work, SQL Server has to know what table to update.
+Restriction. 
+- Any modifications, including UPDATE, INSERT, and DELETE statements, must reference columns from only one base table. That means that if your view joins two or more tables, you can update only one of those tables through the view.
+- The second restriction is that the columns being modified must directly reference the data in the base table so the columns cannot be derived, which excludes aggregate functions like sum or average, computed columns and columns from set operators like union and intercept.
+-  The third rule says that the columns being modified must not be affected by GROUP BY, HAVING, DISTINCT, PIVOT, or UNPIVOT clauses. This rule and the previous one are consequences of the first rule. Also, your view cannot use TOP or an OFFSET clause together with the WITH CHECK OPTION clause. It forces all data modification statements executed against the view to follow the conditions in the SELECT statement by making sure that the data remains visible through the view after the modification is committed.
+
+```sql
+CREATE OR ALTER VIEW Orders.CustomerList 
+WITH SCHEMABINDING
+AS
+  SELECT 
+    cust.CustName             AS Name, 
+    sal.Salutation            AS Salutation,
+    cust.CustStreet           AS Street, 
+    city.CityStateCity        AS City, 
+    city.CityStateProv        AS StateProv,
+    city.CityStatePostalCode  AS PostalCode,
+    city.CityStateCountry     AS Country
+  FROM orders.Customers cust
+    INNER JOIN Orders.CityState city
+      ON cust.CityStateID = city.CityStateID
+    INNER JOIN Orders.Salutations sal
+      ON cust.SalutationID = sal.SalutationID;
+GO
+
+UPDATE Orders.CustomerList
+SET name = 'Trillian Dent', Salutation = 'Mrs.'
+WHERE name = 'Trillian Astra';
+GO
+```
+
+====== Organizar daqui pra baixo
 
 Implementing Indexed Views
 Introducing Indexed Views
