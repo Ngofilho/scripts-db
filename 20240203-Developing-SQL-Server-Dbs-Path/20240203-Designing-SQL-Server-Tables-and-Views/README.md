@@ -505,7 +505,7 @@ SELECT
 FROM Orders.CustomerList cl;
 ```
 
-Demo 2 - Using WITH SCHEMABINDING
+Using WITH SCHEMABINDING
 There's a problem with the view I just defined. It's not obvious at first, so let me show you. Here I have a script to illustrate the problem. First, I create a test table with just two columns, an integer and a float. I populate that table with some sample values. Next, I create a view on that test table. I can easily query the view and get the table contents. Now I'll drop the table. SQL Server does not complain. But what if I query the view again? Boom! It throws an exception unsurprising. But that's a problem. Any application program including other T-SQL code will now break if it tries to query the view. How about something more subtle? I'll redefine the table but with a twist. I've switched the meaning and datatypes of the two columns. The view seems to work again, but does it work as expected? It does not. The first column was supposed to be an integer, and the second a float, not the other way around. Again, application code using this view will break. What can I do? Well, let's go back to the top of this script. This time I'll add an option to the view, WITH SCHEMABINDING. 
 
 When you use the option WITH SCHEMABINDING in a view, three rules apply.
@@ -564,32 +564,178 @@ WHERE name = 'Trillian Astra';
 GO
 ```
 
-====== Organizar daqui pra baixo
+#### Indexed Views
 
-Implementing Indexed Views
-Introducing Indexed Views
-Hello. Welcome back to the course, Designing and Implementing Tables and Views in SQL Server. My name is Gerald Britton. Throughout our exploration of SQL Server views, I've been saying that they are similar to tables, but virtual. But if views are similar to tables, that means that they can be indexed. And as with tables, putting one or more indexes on a view can speed up your queries. In this module, I'll be creating indexed views for Bob's Shoes order system. There won't be a general discussion of indexing or how to maintain them or troubleshoot them. Pluralsight.com has other courses that do a great job of that. What you will learn in this module, though, are the requirements, recommendations, considerations, and, of course, the syntax for defining indexed views. In this module, the very first thing I'll do is describe what an indexed view is and how such a view is similar to an ordinary table and where it differs. Next, I'll discuss the requirements and restrictions placed on indexed views. There are quite a few. Most of the requirements stem from the fact that a view must be deterministic. You'll see just what that means. Then I'll look at some of the key recommendations for building indexed views, especially regarding date conversions. There are a few other considerations for indexed views that you need to be aware of to avoid surprises later on. Of course, throughout this module, you'll learn about the DDL syntax used to create, alter, and drop indexes on views. So what is a view? An indexed view is a persisted object stored in the database in the same way that table indexes are stored. The key word here is persisted. Another word sometimes used is materialized. That means that the index is written to disk. So, while the underlying view is still a virtual table, any index on it is no longer virtual. It is stored in physical form just like an ordinary table index. Now the query optimizer may use indexed views to speed up the query execution. The view does not have to be referenced in the query for the optimizer to consider it for substitution, and that last part is worth repeating. The view does not have to be referenced in the query for the optimizer to consider that view for a substitution. That's right! You can get performance gains from an indexed view without even referencing it or using it by name on purpose. SQL Server knows that it is there and will use it if it thinks it will speed things up. When you learned about tables, you learned that clustered indexes define the order in which database pages are stored so that the table becomes a clustered index as opposed to a heap. I also showed that non-clustered indexes are separate objects that point to table pages whether the table is a clustered index or a heap. Indexed views are only slightly different in that they are never stored as heaps. That means there must always be a clustered index on a view, and that's a great segue into the general requirements. So let's look at those.
+Putting one or more indexes on a view can speed up your queries.
+Most of the requirements stem from the fact that a view must be deterministic.
+An indexed view is a persisted object stored in the database in the same way that table indexes are stored.
+Another word sometimes used is materialized. That means that the index is written to disk. So, while the underlying view is still a virtual table, any index on it is no longer virtual. It is stored in physical form just like an ordinary table index.
+Now the query optimizer may use indexed views to speed up the query execution. The view does not have to be referenced in the query for the optimizer to consider it for substitution, and that last part is worth repeating. The view does not have to be referenced in the query for the optimizer to consider that view for a substitution. You can get performance gains from an indexed view without even referencing it or using it by name on purpose. SQL Server knows that it is there and will use it if it thinks it will speed things up. clustered indexes define the order in which database pages are stored so that the table becomes a clustered index as opposed to a heap. Non-clustered indexes are separate objects that point to table pages whether the table is a clustered index or a heap. Indexed views are only slightly different in that they are never stored as heaps. That means there must always be a clustered index on a view, and that's a great segue into the general requirements.
 
 Requirements for Indexed Views
-The first requirement for an indexed view is that the first index must be a unique clustered index. After the unique clustered index has been created, you can create one or more non-clustered indexes. Creating a unique clustered index on a view improves query performance because the view is stored in the database in the same way a table with a clustered index is stored. Indexed views require that certain SET options be in effect at creation time. There are several that I'll show you on the next slide. The view upon which you want to create an index must be deterministic. That's the reason for the SET options you'll see in a moment. The determinism requirement also implies some other things that I'll get into. Any view that you create an index on must have been created using the WITH SCHEMABINDING option. Also, any functions referenced by the view must have, likewise, been created using this option. There is a list of T-SQL elements that may not be used in the SELECT statement in the view definition upon which you wish to place an index. The list is long enough that a full discussion of the reasons for each item might just make your head spin, but I'll touch on some of the important ones. And note that if a view contains a GROUP BY clause, the key of the unique clustered index can reference only the columns specified in that clause. To make sure that indexed views can be maintained correctly and return consistent results, they require fixed values for several SET options. This is another way of saying that the view must be deterministic. And this table shows those options. There are seven SET options with the required settings given in the second column labeled Required. Note that the required values are the same as the Server Default settings. However, you cannot generally count on the defaults being in effect. The rule, Explicit is better than implicit, applies here. And note that the defaults for OLEDB/ODBC and DB-library are different from the requirements and the server defaults. Also, if you set ANSI warnings to ON, that action implicitly sets ARITHABORT on as well. When you set them to OFF, an arithmetic overflow or divide by 0 does not cause an error, and null is returned instead. Well, that won't do for indexed values. That is why both of these must be on for an indexed view. It's easy to come up with examples for the others as well. Take a moment and work through these options to convince yourself that incorrect settings can lead to indeterminate results. The definition of an indexed view must be deterministic. That means that all expressions, including those in the WHERE and GROUP BY clauses and the ON clauses of joins must always return the same result when evaluated with the same argument values. An example of a deterministic function is DATEADD since it always returns the same result with the same inputs. If you know some functional programming, you can call DATEADD a pure function. On the other hand, the GETDATE function is not deterministic and also not pure since it can return a different result on every call. See what other examples you can find of nondeterministic functions. One of the properties of every column is the IsDeterministic property. You can query this with the COLUMNPROPERTY function as you'll see in a moment. Now floating-point data is a special problem since the exact result of an expression with floating-point numbers may depend on the processor or microcode versions in use. Such expressions cannot be in the key columns of an indexed view. Deterministic expressions that do not contain float expressions are called precise, and that is what you need for key columns and for WHERE, GROUP BY, and the ON clauses of indexed views. The COLUMNPROPERTY function will also show you if a computed column is precise. Now let's look at some of these things in the first demo.
+The first requirement for an indexed view is that the first index must be a unique clustered index. After the unique clustered index has been created, you can create one or more non-clustered indexes. Creating a unique clustered index on a view improves query performance because the view is stored in the database in the same way a table with a clustered index is stored.
+Indexed views require that certain SET options be in effect at creation time. 
+The view upon which you want to create an index must be deterministic.
+Any view that you create an index on must have been created using the WITH SCHEMABINDING option. Also, any functions referenced by the view must have, likewise, been created using this option.
 
-Demo 1 - Determining Determinism
-Here I have a script that tries to create an indexed view where at least one column is not deterministic and precise. First, I drop any existing view of the same name. Then I create the view WITH SCHEMABINDING as required. The view has two computed columns. The first is just A concatenation of an OrderId and an OrderItemId. But the second uses a floating-point number in its computation. Now having created this view, I can query the COLUMNPROPERTIES. Note that the first column, the concatenation of Order and ItemIds, is both deterministic and precise. But the second column, while deterministic, is not precise since it involves a floating-point number. Now let me try to create an index on this view. It fails. Note the error message. Column 2 is the problem. I think it's a good idea to pause this video for a moment and try to change the view definition to fix that. What would you do?
+There is a list of T-SQL elements that may not be used in the SELECT statement in the view definition upon which you wish to place an index. The list is long, and these are the important ones. 
+
+And note that if a view contains a GROUP BY clause, the key of the unique clustered index can reference only the columns specified in that clause. To make sure that indexed views can be maintained correctly and return consistent results, they require fixed values for several SET options. This is another way of saying that the view must be deterministic. 
+And this table shows those options. There are seven SET options with the required settings given in the second column labeled Required. Note that the required values are the same as the Server Default settings. However, you cannot generally count on the defaults being in effect. The rule, Explicit is better than implicit, applies here. And note that the defaults for OLEDB/ODBC and DB-library are different from the requirements and the server defaults. Also, if you set ANSI warnings to ON, that action implicitly sets ARITHABORT on as well. When you set them to OFF, an arithmetic overflow or divide by 0 does not cause an error, and null is returned instead. 
+|SET option|Required|Server Default|OLEDB/ODBC Default|DB-library Default|
+|-|-|-|-|-|
+|ANSI_NULLS|ON|ON|ON|OFF|
+|ANSI_PADDING|ON|ON|ON|OFF|
+|ANSI_WARNINGS*|ON|ON|ON|OFF|
+|ARITHABORT|ON|ON|OFF|OFF|
+|CONCAT_NULL_YIELDS_NULL|ON|ON|ON|OFF|
+|NUMERIC_ROUNDABORT|OFF|OFF|OFF|OFF|
+|QUOTED_IDENTIFIER|ON|ON|ON|OFF|
+
+The definition of an indexed view must be `deterministic`. That means that all expressions, including those in the WHERE and GROUP BY clauses and the ON clauses of joins must always return the same result when evaluated with the same argument values. An example of a deterministic function is DATEADD since it always returns the same result with the same inputs.
+One of the properties of every column is the `IsDeterministic` property. You can query this with the `COLUMNPROPERTY` function. Now floating-point data is a special problem since the exact result of an expression with floating-point numbers may depend on the processor or microcode versions in use. Such expressions cannot be in the key columns of an indexed view. Deterministic expressions that do not contain float expressions are called precise, and that is what you need for key columns and for WHERE, GROUP BY, and the ON clauses of indexed views. The COLUMNPROPERTY function will also show you if a computed column is precise. 
+
+Determining Determinism
+Here I have a script that tries to create an indexed view where at least one column is not deterministic and precise. First, I drop any existing view of the same name. Then I create the view WITH SCHEMABINDING as required. The view has two computed columns. The first is just A concatenation of an OrderId and an OrderItemId. But the second uses a floating-point number in its computation.
+```sql
+USE BobsShoes;
+GO
+
+DROP VIEW IF EXISTS foo;
+GO
+
+-- Create a test view using computed columns
+CREATE VIEW foo
+WITH SCHEMABINDING
+AS
+SELECT 
+    CONCAT(oi.OrderID, oi.OrderItemID) AS One, 
+    oi.Discount * cast(.90 as [float]) AS Two
+FROM Orders.OrderItems oi;
+GO
+```
+ Now having created this view, I can query the COLUMNPROPERTIES. Note that the first column, the concatenation of Order and ItemIds, is both deterministic and precise. But the second column, while deterministic, is not precise since it involves a floating-point number. Now let me try to create an index on this view. It fails. Note the error message. Column 2 is the problem.
+```sql
+-- Query to show if columns are deterministic and precise
+SELECT 
+    COLUMNPROPERTY(OBJECT_ID(N'foo'), 'One', 'IsDeterministic') AS OneIsDeterministic,
+    COLUMNPROPERTY(OBJECT_ID(N'foo'), 'One', 'IsPrecise') AS OneIsPrecise,
+    COLUMNPROPERTY(OBJECT_ID(N'foo'), 'Two', 'IsDeterministic') AS TwoIsDeterministic,
+    COLUMNPROPERTY(OBJECT_ID(N'foo'), 'Two', 'IsPrecise') AS TwoIsPrecise;
+
+-- Try to index the view
+DROP INDEX IF EXISTS ix_foo ON foo;
+CREATE UNIQUE CLUSTERED INDEX ix_foo ON foo(One, Two);
+
+DROP VIEW IF EXISTS foo;
+```
 
 YMIVR - Yet More Indexed View Requirements
-There are a number of other requirements placed on indexed views, so many that it would be a little tedious to go over each one, but let me highlight a few of the forbidden T-SQL elements: COUNT, ROWSETs, OUTER JOINS, derived tables, self-joins, sub-queries, DISTINCT, TOP, ORDER BY, UNION, EXCEPT, INTERSECT, MIN, MAX, PIVOT, UNPIVOT, and many more. See the official documentation for full details. At the time of writing, this bit.ly link opened up the page. Or you can simply search for Create Indexed Views in SQL Server. One other problem area concerns date literals. Look at the expression at the top. What is that date? Well, it depends on the locale setting. Some locales read this as the 12th of January, and others as the 1st of December. The ISO format, however, is always read as year, month, day, so January 12, 2020, in this example. It is deterministic. If you use date literals in your indexed views, the recommendation is to explicitly convert them to the type you want. The CAST and CONVERT functions have format styles that are deterministic. Use those. Now let's build an indexed view for Bob's Shoes. On to the next demo.
+There are a number of other requirements placed on indexed views, so many that it would be a little tedious to go over each one, but let me highlight a few of the forbidden T-SQL elements: COUNT, ROWSETs, OUTER JOINS, derived tables, self-joins, sub-queries, DISTINCT, TOP, ORDER BY, UNION, EXCEPT, INTERSECT, MIN, MAX, PIVOT, UNPIVOT, and many more. See the official documentation for full details. At the time of writing, this bit.ly link opened up the page. Or you can simply search for Create Indexed Views in SQL Server. One other problem area concerns date literals. Look at the expression at the top. What is that date? Well, it depends on the locale setting. Some locales read this as the 12th of January, and others as the 1st of December. The ISO format, however, is always read as year, month, day, so January 12, 2020, in this example. It is deterministic. If you use date literals in your indexed views, the recommendation is to explicitly convert them to the type you want. The CAST and CONVERT functions have format styles that are deterministic. Use those. 
 
 Demo 2 - Indexing the Customer List View
-In the last module, I created a view to retrieve data from the Customers, Salutations, and City/State tables for easy use by Bob's business users. Here's the definition I ended up with. I've added one more column, the CustomerID. I'm going to need this since to create any index on a view, there must be a unique clustered index. Customer names are not unique, even if you include all the other attributes in the view. But the CustomerID is unique, since that is generated by SQL Server. Now that I have a new view, I'll put the first index on it. Here I will create the unique clustered index. I can select from the view as before, and now SQL Server has the option of using the new index in its execution plans. I'm working with a very small data set, however, so the new index may not be chosen. Notice the one option I've commented out, EXPAND VIEWS. This tells SQL Server to ignore any index on the view and expand the view into queries on the underlying tables. If I uncomment this line and run the query, the execution plan shows this in action. All the tables referenced in the view are queried directly. In other words, the view was expanded as the name of the option implies.
+To create any index on a view, there must be a unique clustered index. Customer names are not unique, even if you include all the other attributes in the view. But the CustomerID is unique, since that is generated by SQL Server. 
+```sql
+USE BobsShoes;
+GO 
 
-Demo 3 - Adding a Nonclustered Index and Views with Aggregates
-Now let me also put a non-clustered index on this view, this time using the Name and PostalCode columns. There, the query works fine, and here I can also use the option EXPAND VIEWS if I want to. Here's another view I built in the last module, the OrderSummary view. Let's index that. Oops! I got an error. It seems I need to use the COUNT_BIG function here. In fact, the full rule is that if there is a GROUP BY, there must also be a COUNT_BIG. so let's put that in. Second try. Oops! Another error. The view contains an expression on the result of an aggregate function or grouping column. In this case, the problem is the in-line IF expression on the IsExpedited column. I'll remove that. Note that since an in-line IF is syntactic sugar for a CASE expression, using CASE here would not be any better. Now the index is successfully created. Since the view contains an aggregated column, the sum of the quantities, the index then persists that aggregate. For querying, this means that SQL Server no longer has to process the base tables to get those values. They are part of the view's clustered index and can give a nice performance boost. This is not without a cost however, since if Orders or OrderItems are inserted or updated or deleted, then part of the index view will also have to be updated. Like so many things in database design, you need to weigh the cost against the benefits. For example, if you know that the view will be queried many more times than the base tables are updated, the index is probably worth it. The best approach is to get a baseline of current performance, then decide if the savings of having an index on a view is worth the cost of updating it when the base tables change.
+-- Customer List view
+CREATE OR ALTER VIEW Orders.CustomerList 
+WITH SCHEMABINDING
+AS
+  SELECT
+    cust.CustID               AS CustomerID,
+    cust.CustName             AS Name, 
+    sal.Salutation            AS Salutation,
+    cust.CustStreet           AS Street, 
+    city.CityStateCity        AS City, 
+    city.CityStateProv        AS StateProv,
+    city.CityStatePostalCode  AS PostalCode,
+    city.CityStateCountry     AS Country
+  FROM orders.Customers cust
+    INNER JOIN Orders.CityState city
+      ON cust.CityStateID = city.CityStateID
+    INNER JOIN Orders.Salutations sal
+      ON cust.SalutationID = sal.SalutationID;
+GO
+```
+Now that I have a new view, I'll put the first index on it. Here I will create the unique clustered index. 
+```sql
+-- Create a Unique, clustered index on the view
+DROP INDEX IF EXISTS UQ_CustomerList_CustomerID ON Orders.CustomerList;
+CREATE UNIQUE CLUSTERED INDEX UQ_CustomerList_CustomerID
+    ON Orders.CustomerList(CustomerID);
+GO
+```
+
+I can select from the view as before, and now SQL Server has the option of using the new index in its execution plans. I'm working with a very small data set, however, so the new index may not be chosen. Notice the one option I've commented out, EXPAND VIEWS. This tells SQL Server to ignore any index on the view and expand the view into queries on the underlying tables. If I uncomment this line and run the query, the execution plan shows this in action. All the tables referenced in the view are queried directly. In other words, the view was expanded as the name of the option implies.
+```sql
+-- Query the view
+SELECT CustomerID, Name, Salutation, City
+    FROM Orders.CustomerList 
+    WHERE CustomerID = 1
+    -- OPTION (EXPAND VIEWS);
+GO
+```
+
+Adding a Nonclustered Index and Views with Aggregates
+Now let me also put a non-clustered index on this view, this time using the Name and PostalCode columns. There, the query works fine, and here I can also use the option EXPAND VIEWS if I want to.
+```sql
+-- Create a non clustered index on the view
+DROP INDEX IF EXISTS IX_CustomerList_Name_PostalCode ON Orders.CustomerList;
+CREATE NONCLUSTERED INDEX IX_CustomerList_Name_PostalCode  
+    ON Orders.CustomerList(Name, PostalCode);
+GO
+
+-- Query the view
+SELECT Name, PostalCode
+    FROM Orders.CustomerList
+    -- OPTION (EXPAND VIEWS);
+GO
+```
+
+Here's another view, the OrderSummary view. 
+```sql
+USE BobsShoes;
+GO
+
+-- Create the View
+CREATE OR ALTER View Orders.OrderSummary
+WITH SCHEMABINDING 
+AS 
+    SELECT 
+        o.OrderID,
+        o.OrderDate,
+        IIF(o.OrderIsExpedited = 1, 'YES', 'NO') AS Expedited, -- Comment
+        -- o.OrderIsExpedited,   -- Add
+        c.CustName, 
+        SUM(i.Quantity) TotalQuantity
+        -- ,COUNT_BIG(*) AS cb      -- Add
+
+    FROM Orders.Orders o
+    JOIN Orders.Customers c 
+      ON o.CustID = c.CustID
+    JOIN Orders.OrderItems i
+      ON o.OrderID = i.OrderID
+    GROUP BY o.OrderID, o.OrderDate, o.OrderIsExpedited, c.CustName
+GO
+
+-- Create the first index
+CREATE UNIQUE CLUSTERED INDEX UQ_OrderSummary_OrderID
+  ON Orders.OrderSummary (OrderID);
+GO
+
+SELECT *
+FROM Orders.OrderSummary;
+```
+Let's index that. Oops! I got an error. It seems I need to use the COUNT_BIG function here. In fact, the full rule is that if there is a GROUP BY, there must also be a COUNT_BIG. so let's put that in. Second try. Oops! Another error. The view contains an expression on the result of an aggregate function or grouping column. In this case, the problem is the in-line IF expression on the IsExpedited column. I'll remove that. Note that since an in-line IF is syntactic sugar for a CASE expression, using CASE here would not be any better.
+The index is successfully created. Since the view contains an aggregated column, the sum of the quantities, the index then persists that aggregate. For querying, this means that SQL Server no longer has to process the base tables to get those values. They are part of the view's clustered index and can give a nice performance boost. This is not without a cost however, since if Orders or OrderItems are inserted or updated or deleted, then part of the index view will also have to be updated. Like so many things in database design, it's required to weigh the cost against the benefits. For example, if you know that the view will be queried many more times than the base tables are updated, the index is probably worth it. The best approach is to get a baseline of current performance, then decide if the savings of having an index on a view is worth the cost of updating it when the base tables change.
 
 Summary
-In this module, you learned about indexed views. Since views in many respects can be thought of as virtual tables, the idea of indexing them is not unexpected. What can be unexpected, though, is the long list of requirements and restrictions placed on indexed views. When you create an indexed view, it is persisted to permanent storage just like an index on a table. This can lead to an increase in performance since SQL Server now has another option for satisfying a query. And depending on the edition of SQL Server you are running, the database engine will look at indexed views even if not specified in a query. Unlike table indexes, however, the first such index must be a unique clustered index. There is no such thing as an indexed view stored as a heap. Also, you cannot put a primary key on an indexed view. A primary key is a constraint, and that belongs on a base table. Second and subsequent indexes are non-clustered since there can be only one clustered index per object. A view that is indexed may contain certain aggregations, sum, for example. And, finally, as with all indexes, indexed views must be maintained as the base tables change. This can be costly, and that cost needs to be weighed against any perceived performance gains. Now there is one more view type to discuss in this course, partitioned views. See you in the next module.
+Since views in many respects can be thought of as virtual tables, the idea of indexing them is not unexpected. What can be unexpected, though, is the long list of requirements and restrictions placed on indexed views. When you create an indexed view, it is persisted to permanent storage just like an index on a table. This can lead to an increase in performance since SQL Server now has another option for satisfying a query. And depending on the edition of SQL Server you are running, the database engine will look at indexed views even if not specified in a query. Unlike table indexes, however, the first such index must be a unique clustered index. There is no such thing as an indexed view stored as a heap. Also, you cannot put a primary key on an indexed view. A primary key is a constraint, and that belongs on a base table. Second and subsequent indexes are non-clustered since there can be only one clustered index per object. A view that is indexed may contain certain aggregations, sum, for example. And, finally, as with all indexes, indexed views must be maintained as the base tables change. This can be costly, and that cost needs to be weighed against any perceived performance gains.
 
-Implementing Partitioned Views
-Introducing Partitioned Views
+====== Organizar daqui pra baixo
+#### Partitioned Views
 Hello. Welcome back to the course, Designing and Implementing Tables and Views in SQL Server. My name is Gerald Britton. During this course, we've been building a solution to Bob's Shoes' expanding business. Now it's time to think about the long-term. Specifically, what happens with old orders several years into the new system? Normally you don't want to just throw that data away. At the same time, keeping years' old data in the current table will inevitably make the system run slower for some operations, especially maintenance operations like backup and CHECKDB. Also keep in mind that storage can be expensive. I'm not talking about drives you can buy at your local computer store or online. This is about server class storage to build a business on. Many enterprises use storage area networks or SANs to hold their persistent data. That's a good solution that scales well, but it can be expensive. On the other hand, storage does not have to be homogeneous. You can store current data on high-speed, solid-state drives and older data on cheaper spinning media. Still, you want to have the data available and queryable when the auditor comes knocking. Partition views offer a solution to this kind of problem. In this module, you'll learn how to create partition views and the requirements the tables must have to be part of a partitioned view.
 
 Outlining a Partitioned View
