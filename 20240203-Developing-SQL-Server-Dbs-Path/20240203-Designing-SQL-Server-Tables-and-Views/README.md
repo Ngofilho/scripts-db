@@ -736,22 +736,110 @@ Since views in many respects can be thought of as virtual tables, the idea of in
 
 ====== Organizar daqui pra baixo
 #### Partitioned Views
-Hello. Welcome back to the course, Designing and Implementing Tables and Views in SQL Server. My name is Gerald Britton. During this course, we've been building a solution to Bob's Shoes' expanding business. Now it's time to think about the long-term. Specifically, what happens with old orders several years into the new system? Normally you don't want to just throw that data away. At the same time, keeping years' old data in the current table will inevitably make the system run slower for some operations, especially maintenance operations like backup and CHECKDB. Also keep in mind that storage can be expensive. I'm not talking about drives you can buy at your local computer store or online. This is about server class storage to build a business on. Many enterprises use storage area networks or SANs to hold their persistent data. That's a good solution that scales well, but it can be expensive. On the other hand, storage does not have to be homogeneous. You can store current data on high-speed, solid-state drives and older data on cheaper spinning media. Still, you want to have the data available and queryable when the auditor comes knocking. Partition views offer a solution to this kind of problem. In this module, you'll learn how to create partition views and the requirements the tables must have to be part of a partitioned view.
+
 
 Outlining a Partitioned View
 Generally a partitioned view is defined like this. It begins like any other CREATE VIEW statement, and you SELECT the data from the first table. That is followed by a UNION ALL operator and a SELECT statement for the data from the second table. If there is a third table, there is another UNION ALL and a SELECT statement for that data. This can be continued if you have additional tables with no built-in limit to the number of member tables in the partitioned view. The requirement for UNION ALL for partitioned views and the proscription against the UNION operator for indexed views implies that partitioned views cannot be indexed. However, there are some other requirements and conditions. Let's look at those. The SELECT statements in a partitioned view should contain all columns in the underlying base tables. And columns in the same position in each SELECT list should be of the same type, not just types that can be implicitly converted, but the same actual types. Though not explicitly stated, generally you want to ensure that the columns also have the same semantic contents, such as dates, names, and quantities. At least one column in the same position across all the SELECT statements should have a CHECK constraint. That constraint has to be defined so that only one base table in the view can satisfy the constraint. That is, the member tables cannot have any overlapping intervals with respect to the constraint. This column is called the partitioning column and can have different names in each of the tables if required. In practice, though, keep column names the same across the member tables if at all possible to avoid confusion. Such column names are also called conformant. And, finally, a column can appear only once in each SELECT list.
 
-Reviewing the Requirements and Restrictions
-There are a few important requirements for partitioning columns. First, the column needs to be part of the primary key of the table. This helps SQL Server ensure that any queries against the partition view only have to scan one table in the view if the partitioning column is specified in the query. Of course, if the partitioning column is not specified in a query to the view, all tables will be involved. Second, the partitioning column cannot be computed or have the IDENTITY property or have a default value, nor may it be a timestamp column, also known as a row version column. Though I haven't covered this type in this course, the official documentation contains a full discussion with examples. Third, there can be only one partitioning constraint defined on this column. Otherwise, the definition is considered to be ambiguous. And, fourth, there are no restrictions on the updateability of the partitioning column, at least not from the perspective of the partitioned view. Naturally any constraint on the column still applies to inserts and updates. The tables participating in a partitioned view are called member tables. They may be on the same instance as the partitioned view or on different instances including remote servers referenced through four-part names or open data source or open row set table names. If one or more of the tables is remote, the view is called a distributed partitioned view and has even more restrictions that you can find in the official docs. A member table can appear only one time in the set of tables combined with the UNION ALL statement. And no member table may have an index on a computed column whether persisted or not. All member tables should have similar primary keys. Practically, this means that the corresponding columns in each table should be of the same type and in the same order and that there should be the same number of columns in the primary keys of each member table. This means that the only things that can differ are the column names. Finally, member tables must all have the same ANSI padding settings. This controls the way the column stores values shorter than the defined size of the column and the way the column stores values that have trailing blanks in char, varchar, binary, and varbinary data. The recommendation is that this option always be set to On. Don't change it without properly understanding all the implications, not just those for partitioned views. Now with all those restrictions and caveats under your belt, let's build some partitioned views.
+Requirements and Restrictions
+Requirements for partitioning columns.
+- First, the column needs to be part of the primary key of the table. This helps SQL Server ensure that any queries against the partition view only have to scan one table in the view if the partitioning column is specified in the query. Of course, if the partitioning column is not specified in a query to the view, all tables will be involved.
+- Second, the partitioning column cannot be computed or have the IDENTITY property or have a default value, nor may it be a timestamp column, also known as a row version column, the official documentation contains a full discussion with examples.
+- Third, there can be only one partitioning constraint defined on this column. Otherwise, the definition is considered to be ambiguous.
+- Fourth, there are no restrictions on the updateability of the partitioning column, at least not from the perspective of the partitioned view. Naturally any constraint on the column still applies to inserts and updates. The tables participating in a partitioned view are called member tables. They may be on the same instance as the partitioned view or on different instances including remote servers referenced through four-part names or open data source or open row set table names. If one or more of the tables is remote, the view is called a distributed partitioned view and has even more restrictions that you can find in the official docs. A member table can appear only one time in the set of tables combined with the UNION ALL statement. And no member table may have an index on a computed column whether persisted or not. All member tables should have similar primary keys. Practically, this means that the corresponding columns in each table should be of the same type and in the same order and that there should be the same number of columns in the primary keys of each member table. This means that the only things that can differ are the column names.
+- Finally, member tables must all have the same ANSI padding settings. This controls the way the column stores values shorter than the defined size of the column and the way the column stores values that have trailing blanks in char, varchar, binary, and varbinary data. The recommendation is that this option always be set to On. Don't change it without properly understanding all the implications, not just those for partitioned views. 
 
-Demo 1 - Building a Partitioned View for the Orders Table
-In this demo, I'll start to address Bob's requirement of modifying the Orders table to keep current and older orders separated yet accessible. First, I'll add a partitioning column with the appropriate CHECK constrain. Then I'll create and run a partitioned view so you can see how this works in practice. Back in Data Studio, I'll start off by re-creating the Orders table. The first change is that the OrderID, which was the primary key, now has no constraint, though it is still an IDENTITY column. The second change is the addition of an OrderYear column. This will be the new partitioning column. As required, it has a constraint, in this case limiting it to orders from the year 2019. The other columns are the same, but I have a new PRIMARY KEY constraint. As required by partitioned views, the primary key now includes the partitioning column. the OrderItems table has also changed. I need to add the OrderYear column here too. This change is also reflected in the FOREIGN KEY reference, which now needs to reference both columns. In order to have a real partitioned view, I need another table that looks like the Orders table. I created one that looks the same, although the names of the objects have changed adding 2018 on the end. Also, the CHECK constraint on the partitioning column now limits data to the year 2018. With these things in place, I can now create the partitioned view. Notice that it follows the outline I started with at the beginning of this module. There are two SELECT statements connected with a UNION ALL set operator. All columns are selected from each table. You can easily imagine how this might grow as new business years are added. Considering that some regulations require seven years of data, there could in time be seven SELECT statements here. I'll add some data so that I have something to query. Now I can query the partitioned view. First, let me query the whole thing. All four orders are returned. Now let me limit the query to just the year 2018. Only two rows are returned as expected. Something interesting, though, is how SQL Server handles these queries. Here are two execution plans produced using the new partitioned view. The first plan where the query specifies the partitioned view without conditions concatenates the two tables together. The second plan, which limits the results to those orders from 2018, only looks at one table. The other table has been pruned away. This pruning is responsible for the performance advantage offered by partitioned views. To prove to yourself that this works, change the query to return only the year 2019, and observe the results.
+```sql
+USE BobsShoes;
+GO
 
-Designing and Updating Partitioned Views
-You might be thinking that setting up a partitioned view is a little complicated. Well, you're right. If you want to use partitioned views, you should design your tables with partitioning in mind. That means thinking about the partitioning scheme you want to use. It could be time or date oriented like I used. That's a popular choice. But it could also be by order ID range if you like, or anything else that makes business sense. I think you can also see that as Bob's business grows year by year, this view from the demo will change. New tables will be added for new years. This could be done by renaming the table for one year and creating a new one for the next. Then adjusting the view. Or you could create a number of tables in advance to reduce the yearly effort. If you take that approach, though, you will probably be creating stored procedures to insert into the right table based on the order date. Though encapsulating logic like that in a stored procedure makes lots of sense for many reasons, it is more code to test and maintain. Is there a simpler way? Though I haven't discussed them in this course, partitioned tables offer many of the same features without creating multiple tables. On the other hand, you can't partition a table across servers the same way you can with views. Also, maintenance of partitioned tables is really no simpler than that for partitioned views, though the two are quite different. But what about updating partitioned views? You can update partitioned views with INSERT, UPDATE, and DELETE statements, but several conditions apply. An INSERT statement must supply values for all the columns in the view even if the underlying tables have columns with defaults specified. If you are inserting or updating data, you cannot use the default keyword for a column value, even if the column has a default value defined in the corresponding member table. It may seem redundant to say this, but any values supplied for the partitioning column must satisfy one of the constraints. And since the constraints need to identify disjoint sets, such a value cannot satisfy more than one constraint. When updating a partitioned view, you cannot update an identity or a timestamp column. There are a few other minor conditions that you may actually never encounter involving triggers and bulk inserts. See the official documentation for all the detail.
+-- Drop any existing order tables and views
+DROP VIEW IF EXISTS Orders.PartitionedOrders, Orders.OrderSummary, Orders.TotalOrderItems;
+DROP TABLE IF EXISTS Orders.OrderItems, Orders.Orders, Orders.Orders2018;
 
-Summary  
-In this module, you learned some of the motivations for partitioned views and how to build them. You also saw that there are many requirements and restrictions placed on partitioned views. I talked about the partitioning column constraint and how it is used by SQL Server to determine which of the underlying tables to look at to satisfy a query. I also showed you how SQL Server uses the partitioning columns to prune tables from the execution plan. In the demo, I built the partitioned view for Bob's Shoes order table partitioned by year. For that demo, I added a new column to act as the partitioning column based on year. Now can you think of another way this could be done without adding a new column? Hint: Think about the OrderID column. Could anything be done with that? Can you change it so that the primary key is once again a single column? I noted that building partitioned views can be a little complicated and will likely require ongoing maintenance depending on the business usage. Lastly, I talked about additional restrictions for modifying partitioned views. And though I didn't go into this advanced topic, partitioned views can be distributed among several servers, quite a powerful concept. However, as you might expect, there is a set of additional restrictions placed on distributed partitioned views. This brings us to the end of the major topics to be covered in this course. In the summary module, I'll recap what we covered and talk a bit about what we haven't covered, especially several advanced table types.
+CREATE TABLE Orders.Orders (  
+    OrderID int IDENTITY(1,1) NOT NULL,                -- Was primary key
+    OrderYear smallint NOT NULL                        -- New partitioning column
+        CONSTRAINT CK_Orders_Current 
+            CHECK (OrderYear >= 2019 AND OrderYear < 2020), -- Check constraint to create disjoint sets
+    OrderDate date NOT NULL,                                
+    OrderRequestedDate date NOT NULL,
+    OrderDeliveryDate datetime2(0) NULL,
+    CustID int NOT NULL
+        CONSTRAINT FK_Orders_CustID_Customers_CustID 
+            FOREIGN KEY REFERENCES Orders.Customers (CustID),
+    OrderIsExpedited bit NOT NULL
+        CONSTRAINT DF_Orders_OrderIsExpedited_False DEFAULT (0),
+    CONSTRAINT CK_Orders_RequestedDate_GE_OrderDate
+        CHECK (OrderRequestedDate >= OrderDate),
+    CONSTRAINT CK_Orders_DeliveryDate_GE_OrderDate
+        CHECK (OrderDeliveryDate >= OrderDate),
+    CONSTRAINT PK_Orders_OrderYear_OrderID 
+        PRIMARY KEY (OrderYear, OrderID)                    -- New Primary Key
+);
+
+-- Order items table
+DROP TABLE IF EXISTS Orders.OrderItems
+CREATE TABLE Orders.OrderItems (
+    OrderItemID int IDENTITY(1,1) NOT NULL
+        CONSTRAINT PK_OrderItems_OrderItemID PRIMARY KEY,
+    OrderID int NOT NULL,
+    OrderYear smallint NOT NULL,                        -- New column for Foreign Key
+    StockID int NOT NULL
+        CONSTRAINT FK_OrderItems_StockID_Stock_StockID
+            FOREIGN KEY REFERENCES Orders.Stock (StockID),
+    Quantity smallint NOT NULL
+        CONSTRAINT DF_OrderItems_Quantity_1 DEFAULT (1)
+        CONSTRAINT CK_OrderItems_Quantity_GT_zero
+            CHECK (Quantity > 0),
+    Discount numeric(4, 2) NOT NULL
+        CONSTRAINT CK_OrderItems_Discount_GE_zero
+            CHECK (Discount >= 0.0),
+    CONSTRAINT FK_OrderItems_OrderYear_OrderId_Orders   -- New Foreign Key constraint
+        FOREIGN KEY (OrderYear, OrderId)
+        REFERENCES Orders.Orders (OrderYear, OrderId)
+);
+
+-- Orders for the year 2018
+CREATE TABLE Orders.Orders2018 (  
+    OrderID int IDENTITY(1,1) NOT NULL,
+    OrderYear smallint NOT NULL
+        CONSTRAINT CK_Orders2018_Current 
+            CHECK (OrderYear >= 2018 AND OrderYear < 2019),     -- Check constraint to create disjoint sets    
+    OrderDate date NOT NULL,
+    OrderRequestedDate date NOT NULL,
+    OrderDeliveryDate datetime2(0) NULL,
+    CustID int NOT NULL
+        CONSTRAINT FK_Orders2018_CustID_Customers_CustID 
+            FOREIGN KEY REFERENCES Orders.Customers (CustID),
+    OrderIsExpedited bit NOT NULL
+        CONSTRAINT DF_Orders2018_OrderIsExpedited_False DEFAULT (0),
+    CONSTRAINT CK_Orders2018_RequestedDate_GE_OrderDate
+        CHECK (OrderRequestedDate >= OrderDate),
+    CONSTRAINT CK_Orders2018_DeliveryDate_GE_OrderDate
+        CHECK (OrderDeliveryDate >= OrderDate),
+    CONSTRAINT PK_Orders2018_OrderYear_OrderID PRIMARY KEY (OrderYear, OrderID)
+);
+RETURN;
+GO
+
+-- Create partitioned view
+CREATE VIEW Orders.PartitionedOrders
+WITH SCHEMABINDING
+AS
+    SELECT OrderID, OrderYear, OrderDate, OrderRequestedDate, OrderDeliveryDate, CustID, OrderIsExpedited
+    FROM Orders.Orders
+    UNION ALL
+    SELECT OrderID, OrderYear, OrderDate, OrderRequestedDate, OrderDeliveryDate, CustID, OrderIsExpedited
+    FROM Orders.Orders2018
+GO
+```
+
+Table and View Partition Caveats
+You can't partition a table across servers the same way you can with views. Also, maintenance of partitioned tables is really no simpler than that for partitioned views, though the two are quite different.
+But what about updating partitioned views? You can update partitioned views with INSERT, UPDATE, and DELETE statements, but several conditions apply. An INSERT statement must supply values for all the columns in the view even if the underlying tables have columns with defaults specified. If you are inserting or updating data, you cannot use the default keyword for a column value, even if the column has a default value defined in the corresponding member table. It may seem redundant to say this, but any values supplied for the partitioning column must satisfy one of the constraints. And since the constraints need to identify disjoint sets, such a value cannot satisfy more than one constraint. When updating a partitioned view, you cannot update an identity or a timestamp column. There are a few other minor conditions that you may actually never encounter involving triggers and bulk inserts. See the official documentation for all the detail.
+
+Partitioned views can be distributed among several servers, quite a powerful concept. 
 
 </details>
 
@@ -761,4 +849,5 @@ In this module, you learned some of the motivations for partitioned views and ho
 
 Paper: A relational model of data for large shared data bansk (Codd, Edgar Frank)
 
+Done Between 2024-02-03 and 2024-07-28
 </details>
