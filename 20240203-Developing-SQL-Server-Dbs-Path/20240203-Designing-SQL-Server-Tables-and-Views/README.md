@@ -306,7 +306,7 @@ ALTER TABLE Orders.Orders
         DEFAULT GETDATE()+1 FOR OrderDate;
 ```
 
-Implementing the PRIMARY KEY Constraint
+Implementing the PRIMARY KEY Constraint   
 SQL Server implements the PRIMARY KEY constraint with a backing index. And therein lie a few choices. The first choice is an important one. Since the primary key is backed by an index, what kind of index should that be? There are two choices--`clustered` and `nonclustered`.
 Clustered indexes sort and store data rows in the table based on their key values. These are the columns included in the index definition. These keys are stored in a special structure called a B-tree that enables SQL Server to find the row or rows associated with the key values quickly and efficiently. There can be only one clustered index per table, however, because the data rows themselves can be stored in only one order. 
 If a table has no clustered index, it is called a heap. Data rows are stored wherever they fit in no particular order. This is why we say that a table is either a clustered index or a heap. It has to be one or the other. Now if your primary key is an identity column on a clustered index, like I've been using for Bob's Shoes order system, this means that new rows, which get new ever-increasing identity values, will always be inserted at the end of the data and that the data is always in order of the ID. Since SQL Server maintains a clustered index in sorted order, it means less I/O when inserting new rows and when reading the table in the order of the identity column. On the other hand, if your application mainly reads from a table in a different order other than that of the identity column, this can mean more jumping around the disk to get the rows you want. For example, if you're producing a report of customers, chances are you want to keep that report in the order of the customers' names, not their IDs. So before you just take the default and use a clustered index for your primary key, take a look at the alternative.
@@ -361,9 +361,7 @@ CREATE TABLE Orders.Stock (
 
 ```
 
-
-
-More About Foreign Key Constraints
+More About Foreign Key Constraints   
 A foreign key works by building and enforcing a link between two tables. This link controls the data that can be stored in the foreign key table. The link is controlled by referencing a primary or unique key in a base table from a referencing table with the same columns as the key in the base table. The OrderItems table references the Orders table by including the OrderId, and the OrderItems table refers to the Stock table by another foreign key.  
 Foreign key definitions on those columns enforce the links. Foreign keys help preserve referential integrity. For example, in the OrderItems table, I cannot add a new row referencing a nonexistent OrderId. Also, I cannot delete or update the key in the base table since it is bound by the FOREIGN KEY constraint, but this can be a problem in some situations. For example, suppose Bob's Shoes stopped carrying brown sandals in size 17. No problem, you say. Just delete that row from the Stock table. Well, suppose there is an existing order for just that shoe in just that size. There are a few options. Issue an error message and stop the deletion leaving an order for a discontinued product, delete the OrderItems that match that Stock item, or perhaps replace the FOREIGN KEY reference in the OrderItems table with a null. The rules for handling this situation and others like it are known as cascading referential integrity. 
 ```sql
@@ -394,13 +392,13 @@ CREATE TABLE Orders.OrderItems (
 
 ```
 
-Options of FOREIGN KEY Constraints when deleting the foreign key
+Options of FOREIGN KEY Constraints when deleting the foreign key   
 - Cascade Option - Means to update any referencing tables with the changes made to the referenced table.   
 - NO ACTION - Means do not allow the delete or update, which means throw an error and leave things as they are. This is the default setting.   
 - SET NULL - Means set the foreign key values to null if the corresponding row in the base table is updated or deleted. For this constraint to execute, the foreign key columns must be nullable.  
 - SET DEFAULT as the name implies sets the foreign key values to their default values when the corresponding row of the base table is updated or deleted. If no default is defined and the column is nullable, the value is set to null. One difference between primary keys and foreign keys is that with foreign keys, the backing index is not automatically created. However, creating such an index is recommended in many situations.
 
-Introducing CHECK Constraints
+Introducing CHECK Constraints   
 A CHECK constraint is a way of declaring limits and validations on data inserted to or updated in a table. Since the CHECK constraint is part of the table definition, it is automatically performed by SQL Server.  Can be defined at the column and table levels. And you can have as many as you need or want. Internally all CHECK constraints are table constraints, but SQL Server accepts simplified syntax when CHECK constraints are defined at the column level. The basic parts of a CHECK constraint are its name and the condition to be checked. The condition must evaluate to a Boolean expression, true or false. The expression can be any valid T-SQL expression including comparisons, membership tests using IN, function calls, and anything else you can dream up as long as it evaluates to true or false. One type of expression not supported by SQL Server or by the majority of commercial databases is a query, that is, your check condition cannot contain a SELECT statement even though that is included in the ANSI SQL standard. However, you could call a function that does contain a SELECT statement.  
 
 Using CHECK Constraints   
@@ -458,7 +456,7 @@ If that helper function changes, you'll need to find all the places it is refere
 
 
 
-Options for Defining CHECK Constraints
+Options for Defining CHECK Constraints   
 You can add constraints when you create a table. They can be specified at either the column level or the table level. Remember to use a table constraint if two or more columns are involved. You can have multiple constraints per column or table in either location. The only exceptions are `FOREIGN KEY` constraints, which ***cannot be used with temporary tables or table variables***. You can add new constraints at any time using the ALTER TABLE ADD CONSTRAINT command. Both column and table constraints can be added this way.  
 By default, SQL Server will check the table against the newly added constraint. The optional parameter `with no check` will add the constraint without checking the table. The default is to check that there are no constraint violations and issue an error message if any are found. If you no longer need a constraint, you can remove it using the `ALTER TABLE DROP CONSTRAINT` command. You also need this to change a constraint since there is no ALTER CONSTRAINT command. Changing constraints always means dropping and re-creating them. By the way, if you drop a key constraint backed by a clustered index, the table becomes a heap. If you need to temporarily disable a constraint, use the `ALTER TABLE NOCHECK CONSTRAINT`. You might do this, for example, when bulk inserting data known to be good, and the constraint slows down the INSERT operation enough to be a problem. Note that you can only disable FOREIGN KEY and CHECK constraints, not other constraint types. You can re-enable or disable a constraint with the ALTER TABLE CHECK CONSTRAINT command. If you want to also reject the constraint, add the WITH CHECK option to the command. For example, you might use `WITH CHECK` after modifying a function used in a check constraint or to verify FOREIGN KEY constraints. The ALTER commands all need a constraint name, but you can also use the keyword ALL to perform the action to all constraints at once.
 
@@ -505,7 +503,7 @@ SELECT
 FROM Orders.CustomerList cl;
 ```
 
-Using WITH SCHEMABINDING
+Using WITH SCHEMABINDING   
 There's a problem with the view I just defined. It's not obvious at first, so let me show you. Here I have a script to illustrate the problem. First, I create a test table with just two columns, an integer and a float. I populate that table with some sample values. Next, I create a view on that test table. I can easily query the view and get the table contents. Now I'll drop the table. SQL Server does not complain. But what if I query the view again? Boom! It throws an exception unsurprising. But that's a problem. Any application program including other T-SQL code will now break if it tries to query the view. How about something more subtle? I'll redefine the table but with a twist. I've switched the meaning and datatypes of the two columns. The view seems to work again, but does it work as expected? It does not. The first column was supposed to be an integer, and the second a float, not the other way around. Again, application code using this view will break. What can I do? Well, let's go back to the top of this script. This time I'll add an option to the view, WITH SCHEMABINDING. 
 
 When you use the option WITH SCHEMABINDING in a view, three rules apply.
@@ -566,7 +564,7 @@ GO
 
 #### Indexed Views
 
-Putting one or more indexes on a view can speed up your queries.
+Putting one or more indexes on a view can speed up your queries.  
 Most of the requirements stem from the fact that a view must be deterministic.
 An indexed view is a persisted object stored in the database in the same way that table indexes are stored.
 Another word sometimes used is materialized. That means that the index is written to disk. So, while the underlying view is still a virtual table, any index on it is no longer virtual. It is stored in physical form just like an ordinary table index.
@@ -595,7 +593,7 @@ And this table shows those options. There are seven SET options with the require
 The definition of an indexed view must be `deterministic`. That means that all expressions, including those in the WHERE and GROUP BY clauses and the ON clauses of joins must always return the same result when evaluated with the same argument values. An example of a deterministic function is DATEADD since it always returns the same result with the same inputs.
 One of the properties of every column is the `IsDeterministic` property. You can query this with the `COLUMNPROPERTY` function. Now floating-point data is a special problem since the exact result of an expression with floating-point numbers may depend on the processor or microcode versions in use. Such expressions cannot be in the key columns of an indexed view. Deterministic expressions that do not contain float expressions are called precise, and that is what you need for key columns and for WHERE, GROUP BY, and the ON clauses of indexed views. The COLUMNPROPERTY function will also show you if a computed column is precise. 
 
-Determining Determinism
+Determining Determinism  
 Here I have a script that tries to create an indexed view where at least one column is not deterministic and precise. First, I drop any existing view of the same name. Then I create the view WITH SCHEMABINDING as required. The view has two computed columns. The first is just A concatenation of an OrderId and an OrderItemId. But the second uses a floating-point number in its computation.
 ```sql
 USE BobsShoes;
@@ -734,10 +732,7 @@ The index is successfully created. Since the view contains an aggregated column,
 Summary     
 Since views in many respects can be thought of as virtual tables, the idea of indexing them is not unexpected. What can be unexpected, though, is the long list of requirements and restrictions placed on indexed views. When you create an indexed view, it is persisted to permanent storage just like an index on a table. This can lead to an increase in performance since SQL Server now has another option for satisfying a query. And depending on the edition of SQL Server you are running, the database engine will look at indexed views even if not specified in a query. Unlike table indexes, however, the first such index must be a unique clustered index. There is no such thing as an indexed view stored as a heap. Also, you cannot put a primary key on an indexed view. A primary key is a constraint, and that belongs on a base table. Second and subsequent indexes are non-clustered since there can be only one clustered index per object. A view that is indexed may contain certain aggregations, sum, for example. And, finally, as with all indexes, indexed views must be maintained as the base tables change. This can be costly, and that cost needs to be weighed against any perceived performance gains.
 
-====== Organizar daqui pra baixo
 #### Partitioned Views
-
-
 Outlining a Partitioned View
 Generally a partitioned view is defined like this. It begins like any other CREATE VIEW statement, and you SELECT the data from the first table. That is followed by a UNION ALL operator and a SELECT statement for the data from the second table. If there is a third table, there is another UNION ALL and a SELECT statement for that data. This can be continued if you have additional tables with no built-in limit to the number of member tables in the partitioned view. The requirement for UNION ALL for partitioned views and the proscription against the UNION operator for indexed views implies that partitioned views cannot be indexed. However, there are some other requirements and conditions. Let's look at those. The SELECT statements in a partitioned view should contain all columns in the underlying base tables. And columns in the same position in each SELECT list should be of the same type, not just types that can be implicitly converted, but the same actual types. Though not explicitly stated, generally you want to ensure that the columns also have the same semantic contents, such as dates, names, and quantities. At least one column in the same position across all the SELECT statements should have a CHECK constraint. That constraint has to be defined so that only one base table in the view can satisfy the constraint. That is, the member tables cannot have any overlapping intervals with respect to the constraint. This column is called the partitioning column and can have different names in each of the tables if required. In practice, though, keep column names the same across the member tables if at all possible to avoid confusion. Such column names are also called conformant. And, finally, a column can appear only once in each SELECT list.
 
